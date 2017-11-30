@@ -5228,7 +5228,11 @@ static std::vector<Option> get_rbd_options() {
     Option("rbd_journal_max_concurrent_object_sets", Option::TYPE_INT, Option::LEVEL_ADVANCED)
     .set_default(0)
     .set_description("maximum number of object sets a journal client can be behind before it is automatically unregistered"),
-  });
+ 	
+    Option("rbd_request_timeout", Option::TYPE_FLOAT, Option::LEVEL_ADVANCED)
+    .set_default(1.0)
+    .set_description("number of seconds before req timeout, write it to rbd.log"),
+ });
 }
 
 static std::vector<Option> get_rbd_mirror_options() {

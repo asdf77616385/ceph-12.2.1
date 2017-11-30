@@ -91,7 +91,8 @@ ssize_t ImageRequestWQ<I>::write(uint64_t off, uint64_t len,
   CephContext *cct = m_image_ctx.cct;
   ldout(cct, 20) << "ictx=" << &m_image_ctx << ", off=" << off << ", "
                  << "len = " << len << dendl;
-
+	utime_t start_time, elapsed;
+	start_time = ceph_clock_now();
   m_image_ctx.snap_lock.get_read();
   int r = clip_io(util::get_image_ctx(&m_image_ctx), off, &len);
   m_image_ctx.snap_lock.put_read();
@@ -108,6 +109,12 @@ ssize_t ImageRequestWQ<I>::write(uint64_t off, uint64_t len,
   if (r < 0) {
     return r;
   }
+    elapsed = ceph_clock_now() - start_time;
+		if (elapsed >= cct->_conf->get_val<double>("rbd_request_timeout"))
+			ldout(cct, 0) << "write spend " << elapsed << dendl;
+	utime_t time1 = ceph_clock_now();
+	ldout(cct,10)<<"--write step-- Internal::write end:"<<time1<<" "<<off<<" ~ "<<len
+	<<" start_time:"<<start_time<<" aio_write_t:"<<time1-start_time<<dendl;  
   return len;
 }
 
@@ -117,7 +124,8 @@ ssize_t ImageRequestWQ<I>::discard(uint64_t off, uint64_t len,
   CephContext *cct = m_image_ctx.cct;
   ldout(cct, 20) << "ictx=" << &m_image_ctx << ", off=" << off << ", "
                  << "len = " << len << dendl;
-
+    utime_t start_time, elapsed;
+    start_time = ceph_clock_now();
   m_image_ctx.snap_lock.get_read();
   int r = clip_io(util::get_image_ctx(&m_image_ctx), off, &len);
   m_image_ctx.snap_lock.put_read();
@@ -134,6 +142,9 @@ ssize_t ImageRequestWQ<I>::discard(uint64_t off, uint64_t len,
   if (r < 0) {
     return r;
   }
+    elapsed = ceph_clock_now() - start_time;
+		if (elapsed > cct->_conf->get_val<double>("rbd_request_timeout"))
+			ldout(cct, 0) << "discard spend " << elapsed << dendl;  
   return len;
 }
 

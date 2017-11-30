@@ -59,6 +59,8 @@ void AioCompletion::complete() {
   tracepoint(librbd, aio_complete_enter, this, rval);
   utime_t elapsed;
   elapsed = ceph_clock_now() - start_time;
+	if (elapsed >= cct->_conf->get_val<double>("rbd_request_timeout"))
+		ldout(cct, 0) << "req aio:" << aio_type << " spend " << elapsed << dendl;  
   switch (aio_type) {
   case AIO_TYPE_GENERIC:
   case AIO_TYPE_OPEN:
