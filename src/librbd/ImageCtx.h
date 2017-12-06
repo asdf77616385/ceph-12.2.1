@@ -46,7 +46,8 @@ namespace librbd {
   template <typename> class ObjectMap;
   template <typename> class Operations;
   class LibrbdWriteback;
-
+  class ImageCtxObs;
+  
   namespace cache { struct ImageCache; }
   namespace exclusive_lock { struct Policy; }
   namespace io {
@@ -204,7 +205,7 @@ namespace librbd {
     journal::Policy *journal_policy = nullptr;
 
     ZTracer::Endpoint trace_endpoint;
-
+    ImageCtxObs *_ImageCtxObs;
     static bool _filter_metadata_confs(const string &prefix, std::map<string, bool> &configs,
                                        const map<string, bufferlist> &pairs, map<string, bufferlist> *res);
 

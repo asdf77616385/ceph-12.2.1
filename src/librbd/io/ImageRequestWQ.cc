@@ -143,7 +143,7 @@ ssize_t ImageRequestWQ<I>::discard(uint64_t off, uint64_t len,
     return r;
   }
     elapsed = ceph_clock_now() - start_time;
-		if (elapsed > cct->_conf->get_val<double>("rbd_request_timeout"))
+		if (elapsed > cct->_conf->rbd_request_timeout)
 			ldout(cct, 0) << "discard spend " << elapsed << dendl;  
   return len;
 }

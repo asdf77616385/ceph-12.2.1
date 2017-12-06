@@ -660,7 +660,7 @@ namespace librbd {
       std::map<mirror_image_status_state_t, int> *states) {
     return librbd::api::Mirror<>::image_status_summary(io_ctx, states);
   }
-
+  
   RBD::AioCompletion::AioCompletion(void *cb_arg, callback_t complete_cb)
   {
     pc = reinterpret_cast<void*>(librbd::io::AioCompletion::create(

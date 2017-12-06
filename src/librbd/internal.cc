@@ -2180,7 +2180,7 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
     }
 
     elapsed = ceph_clock_now() - start_time;
-		if (elapsed >= ictx->cct->_conf->get_val<double>("rbd_request_timeout"))
+		if (elapsed >= ictx->cct->_conf->rbd_request_timeout)
 			ldout(ictx->cct, 0) << "read spend " << elapsed << dendl;    
     ictx->perfcounter->tinc(l_librbd_rd_latency, elapsed);
     ictx->perfcounter->inc(l_librbd_rd);
@@ -2233,7 +2233,7 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
     }
     r = ctx.wait();
 	elapsed = ceph_clock_now() - start_time;
-		if (elapsed >= cct->_conf->get_val<double>("rbd_request_timeout"))
+		if (elapsed >= cct->_conf->rbd_request_timeout)
 			ldout(cct, 0) << "flush spend " << elapsed << dendl;
     ictx->perfcounter->inc(l_librbd_flush);
     return r;

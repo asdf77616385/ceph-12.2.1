@@ -171,7 +171,6 @@ public:
       size_t max, std::map<std::string, mirror_image_status_t> *images);
   int mirror_image_status_summary(IoCtx& io_ctx,
       std::map<mirror_image_status_state_t, int> *states);
-
 private:
   /* We don't allow assignment or copying */
   RBD(const RBD& rhs);

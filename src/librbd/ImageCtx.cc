@@ -162,6 +162,31 @@ struct C_InvalidateCache : public Context {
 
 } // anonymous namespace
 
+class ImageCtxObs : public md_config_obs_t {
+public:
+  explicit ImageCtxObs(CephContext *ccontext) : m_cct(ccontext){}
+  ~ImageCtxObs(){}
+  const char** get_tracked_conf_keys() const
+  {
+    static const char* keys[] = {
+      "rbd_request_timeout",
+      NULL
+    };
+    return keys;
+  }
+  void handle_conf_change(const struct md_config_t *conf,
+                                      const set<string> &changed) {                               
+      if (changed.count("rbd_request_timeout")) {
+	  	ldout(m_cct, 10) << "handle_conf_change, key: rbd_request_timeout"
+			<< " old value:" << m_cct->_conf->rbd_request_timeout
+			<< " new value:" << conf->rbd_request_timeout << dendl;
+    	m_cct->_conf->rbd_request_timeout = conf->rbd_request_timeout;
+  	  }
+  }
+private:
+  CephContext *m_cct;
+};
+
   const string ImageCtx::METADATA_CONF_PREFIX = "conf_";
 
   ImageCtx::ImageCtx(const string &image_name, const string &image_id,
@@ -250,7 +275,9 @@ struct C_InvalidateCache : public Context {
     md_ctx.aio_flush();
     data_ctx.aio_flush();
     io_work_queue->drain();
-
+	
+	g_ceph_context->_conf->remove_observer(_ImageCtxObs);
+	delete _ImageCtxObs;
     delete journal_policy;
     delete exclusive_lock_policy;
     delete io_work_queue;
@@ -312,7 +339,8 @@ struct C_InvalidateCache : public Context {
       object_set->return_enoent = true;
       object_cacher->start();
     }
-
+	_ImageCtxObs = new ImageCtxObs(cct);
+	g_ceph_context->_conf->add_observer(_ImageCtxObs);
     readahead.set_trigger_requests(readahead_trigger_requests);
     readahead.set_max_readahead_size(readahead_max_bytes);
   }

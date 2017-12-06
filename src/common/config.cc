@@ -706,7 +706,7 @@ void md_config_t::_apply_changes(std::ostream *oss)
 
   // Make any pending observer callbacks
   for (rev_obs_map_t::const_iterator r = robs.begin(); r != robs.end(); ++r) {
-    md_config_obs_t *obs = r->first;
+	md_config_obs_t *obs = r->first;
     obs->handle_conf_change(this, r->second);
   }
 
