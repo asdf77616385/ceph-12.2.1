@@ -418,6 +418,18 @@ std::vector<Option> get_global_options() {
     .set_default("12201")
     .set_description(""),
 
+    Option("mon_cluster_critical_log_file", Option::TYPE_STR, Option::LEVEL_ADVANCED)   //写入到另一个文件
+    .set_default("/var/log/zbkc/$cluster-crit.log")
+    .set_description(""),
+
+    Option("mon_cluster_critical_log_level", Option::TYPE_STR, Option::LEVEL_ADVANCED)  //>= warn 的级别的写入
+    .set_default("warn")
+    .set_description(""),
+
+    Option("log_watch_hidden_level", Option::TYPE_STR, Option::LEVEL_ADVANCED)  //>= warn 的级别不会再zbkc -w中显示
+    .set_default("warn")
+    .set_description(""),
+
     Option("enable_experimental_unrecoverable_data_corrupting_features", Option::TYPE_STR, Option::LEVEL_ADVANCED)
     .set_default("")
     .set_description(""),

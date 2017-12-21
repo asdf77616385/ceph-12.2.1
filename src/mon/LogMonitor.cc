@@ -97,6 +97,11 @@ void LogMonitor::update_from_paxos(bool *need_bootstrap)
     dout(7) << __func__ << " loaded summary e" << summary.version << dendl;
   }
 
+  //加入写入重要log的写入文件
+  string new_log_file = g_conf->mon_cluster_critical_log_file;
+  string crit_lv = g_conf->mon_cluster_critical_log_level;
+  string new_channel = CLOG_CHANNEL_CLUSTER + "_crit";
+
   // walk through incrementals
   while (version > summary.version) {
     bufferlist bl;
@@ -152,7 +157,16 @@ void LogMonitor::update_from_paxos(bool *need_bootstrap)
 
 	int min = string_to_syslog_level(log_file_level);
 	int l = clog_type_to_syslog_level(le.prio);
+    if(channel == CLOG_CHANNEL_CLUSTER && !new_log_file.empty() && !crit_lv.empty()) {
+		int min2 = string_to_syslog_level(crit_lv);   //default warn
+		if(l <= min2 ) {
+			min = MAX(min2, min);
+			channel = new_channel;  //改变存储位置
+		}
+	}
+	
 	if (l <= min) {
+	  //大于设定级别写入到log中
 	  stringstream ss;
 	  ss << le << "\n";
           // init entry if DNE
@@ -170,6 +184,12 @@ void LogMonitor::update_from_paxos(bool *need_bootstrap)
 
   dout(15) << __func__ << " logging for "
            << channel_blog.size() << " channels" << dendl;
+  if(channel_blog.size() == 0) {
+  	 check_subs();
+	 return;
+  }
+  map<string, int> channel_fd;
+  
   for(map<string,bufferlist>::iterator p = channel_blog.begin();
       p != channel_blog.end(); ++p) {
     if (!p->second.length()) {
@@ -180,9 +200,24 @@ void LogMonitor::update_from_paxos(bool *need_bootstrap)
 
     dout(15) << __func__ << " channel '" << p->first
              << "' logging " << p->second.length() << " bytes" << dendl;
-    string log_file = channels.get_log_file(p->first);
+    //string log_file = channels.get_log_file(p->first);
 
-    int fd = ::open(log_file.c_str(), O_WRONLY|O_APPEND|O_CREAT, 0600);
+    //int fd = ::open(log_file.c_str(), O_WRONLY|O_APPEND|O_CREAT, 0600);
+    string log_file;
+	if(p->first == new_channel)
+		log_file = new_log_file;
+	else
+		log_file = channels.get_log_file(p->first);
+
+	//写入到log中
+	int fd;
+	if(channel_fd.count(log_file)) {
+		fd = channel_fd[log_file];
+	} else {
+		fd = ::open(log_file.c_str(), O_WRONLY|O_APPEND|O_CREAT, 0600);
+		channel_fd[log_file] = fd;
+	}
+	
     if (fd < 0) {
       int err = -errno;
       dout(1) << "unable to write to '" << log_file << "' for channel '"
@@ -196,7 +231,11 @@ void LogMonitor::update_from_paxos(bool *need_bootstrap)
       VOID_TEMP_FAILURE_RETRY(::close(fd));
     }
   }
-
+	  
+  for(auto &p : channel_fd) {
+  	if(p.second > 0)
+	  VOID_TEMP_FAILURE_RETRY(::close(p.second));
+  }
   check_subs();
 }
 

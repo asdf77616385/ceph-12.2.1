@@ -76,6 +76,10 @@ OPTION(mon_cluster_log_to_graylog, OPT_STR)
 OPTION(mon_cluster_log_to_graylog_host, OPT_STR)
 OPTION(mon_cluster_log_to_graylog_port, OPT_STR)
 
+OPTION(mon_cluster_critical_log_file, OPT_STR)   //写入到另一个文件
+OPTION(mon_cluster_critical_log_level, OPT_STR)	    //>= warn 的级别的写入
+OPTION(log_watch_hidden_level, OPT_STR)		    //>= warn 的级别不会再zbkc -w中显示
+
 OPTION(enable_experimental_unrecoverable_data_corrupting_features, OPT_STR)
 
 SAFE_OPTION(plugin_dir, OPT_STR)
