@@ -1066,7 +1066,8 @@ public:
   int fstatx(int fd, struct ceph_statx *stx, const UserPerm& perms,
 	     unsigned int want, unsigned int flags);
   int fallocate(int fd, int mode, loff_t offset, loff_t length);
-
+  int copy(int src_fd, int dst_fd);
+  
   // full path xattr ops
   int getxattr(const char *path, const char *name, void *value, size_t size,
 	       const UserPerm& perms);

@@ -918,6 +918,53 @@ extern "C" int ceph_sync_fs(struct ceph_mount_info *cmount)
   return cmount->get_client()->sync_fs();
 }
 
+extern "C" int ceph_copy(struct ceph_mount_info *cmount, const char *src, const char *dst)
+{
+  if (!cmount->is_mounted())
+    return -ENOTCONN;
+  int r;
+  int src_fd;
+  int dst_fd;
+  
+  /* The src must exists and should be a file */
+  struct ceph_statx st;
+  r = ceph_statx(cmount, src, &st, CEPH_STATX_ALL_STATS, 0);
+  if (r < 0 || !S_ISREG(st.stx_mode)) {
+    if (r >= 0)
+      r = -ENOTSUP;
+    return r;
+  }
+
+  /* Open the src file */
+  r = ceph_open(cmount, src, O_RDONLY, 0644);
+  if (r < 0) {
+    return r;
+  }
+  src_fd = r;
+
+  /* Open the dst file, create it if it not exists */
+  r = ceph_open(cmount, dst, O_RDWR|O_CREAT, 0644);
+  if (r < 0) {
+    ceph_close(cmount, src_fd);
+    return r;
+  }
+  dst_fd = r;
+
+  /* do copy */
+  r = cmount->get_client()->copy(src_fd, dst_fd);
+  ceph_close(cmount, src_fd);
+  ceph_close(cmount, dst_fd);
+  if (r < 0)
+    return r;
+  /*
+   * Set the dst file's inode info.
+   * In libzbkcfs.h, there is the setattr mask
+   * ZBKC_SETATTR_MODE|UID|GID|MTIME|ATIME|SIZE|CTIME
+   * In later implementation, we should use above marcos.
+   */
+  r = ceph_setattrx(cmount, dst, &st, ~(1<<7), 0);
+  return r;
+}
 
 extern "C" int ceph_get_file_stripe_unit(struct ceph_mount_info *cmount, int fh)
 {

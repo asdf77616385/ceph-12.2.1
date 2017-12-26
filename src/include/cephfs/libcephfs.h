@@ -1120,6 +1120,20 @@ int ceph_fsetxattr(struct ceph_mount_info *cmount, int fd, const char *name,
 int ceph_lsetxattr(struct ceph_mount_info *cmount, const char *path, const char *name, 
 	const void *value, size_t size, int flags);
 
+/**
+ * Copy the objects of src file to dst file using fast-copy.
+ * Dont need to read src file to local buffer, and then write it to dst file.
+ * If the dst file is not exist, create it.
+ * If the src does not exists, return ENOENT
+ * If the src is not a file, return ENOTSUP(for now)
+ * @param cmount the zbkc mount handle to use for performing the copy.
+ * @param src the src file path.
+ * @Param dst the dst file path.
+ *
+ * @returns 0 on success or a negative error code on failure.
+ */
+int ceph_copy(struct ceph_mount_info *cmount, const char *src, const char *dst);
+
 /** @} xattr */
 
 /**

@@ -294,6 +294,18 @@ class Filer {
 	    int flags,
 	    Context *onfinish);
 
+  /*
+   * copy
+   *  copy all the objects from src to dst.
+   */
+  int copy(inodeno_t src_ino,
+             file_layout_t *src_layout,
+             uint64_t len,
+             snapid_t src_snapid,
+             inodeno_t dst_ino,             
+             file_layout_t *dst_layout,
+             Context *oncommit);
+             
 private:
   int probe_impl(Probe* probe, file_layout_t *layout,
 		 uint64_t start_from, uint64_t *end);

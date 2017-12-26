@@ -12968,6 +12968,35 @@ int Client::fallocate(int fd, int mode, loff_t offset, loff_t length)
   return _fallocate(fh, mode, offset, length);
 }
 
+int Client::copy(int src_fd, int dst_fd)
+{
+  /* hold the client lock */
+  Mutex::Locker lock(client_lock);
+  tout(cct) << __func__ << " from " << src_fd
+            << " --> " << dst_fd
+            << std::endl;
+  int r = 0;
+  Context *commit = NULL;
+  
+  Fh *src_fh = get_filehandle(src_fd);
+  assert(src_fh);
+
+  Fh *dst_fh = get_filehandle(dst_fd);
+  assert(dst_fh);
+
+  /* use client object cache */
+  if (cct->_conf->client_oc) {
+    filer->copy(src_fh->inode->ino, &src_fh->inode->layout, 
+                src_fh->inode->size, src_fh->inode->snapid,
+                dst_fh->inode->ino, &dst_fh->inode->layout, commit);
+  } else {
+    filer->copy(src_fh->inode->ino, &src_fh->inode->layout, 
+                src_fh->inode->size, src_fh->inode->snapid,
+                dst_fh->inode->ino, &dst_fh->inode->layout, commit);
+  }
+  return r;
+}
+
 int Client::ll_release(Fh *fh)
 {
   Mutex::Locker lock(client_lock);

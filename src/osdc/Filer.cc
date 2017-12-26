@@ -482,3 +482,27 @@ void Filer::_do_truncate_range(TruncRange *tr, int fin)
 		      new C_OnFinisher(new C_TruncRange(this, tr), finisher));
   }
 }
+
+int Filer::copy(inodeno_t src_ino,
+             file_layout_t *src_layout,
+             uint64_t len,
+             snapid_t src_snapid,
+             inodeno_t dst_ino,             
+             file_layout_t *dst_layout,
+             Context *oncommit) {
+    vector<ObjectExtent> src_extents;
+    vector<ObjectExtent> dst_extents;
+    
+    /*
+     * Note:
+     * If the src_layout is not the same as dst_layout,ex, 
+     * src_layout.object_size=4M, but dst_layout.object_size=8M,
+     * there are two objects in src to fill on object in dst.
+     */
+    Striper::file_to_extents(cct, src_ino, src_layout, 0, len, 0, src_extents);
+    Striper::file_to_extents(cct, dst_ino, dst_layout, 0, len, 0, dst_extents);    
+    
+    objecter->sg_copy(src_extents, src_snapid, dst_extents, oncommit);
+    return 0;
+}
+

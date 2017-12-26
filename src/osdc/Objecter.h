@@ -2859,6 +2859,23 @@ public:
     return tid;
   }
 
+  ceph_tid_t copy(const object_t& src_oid, const object_locator_t& src_oloc,
+  	      snapid_t src_snapid, const object_t& dst_oid,
+  	      const object_locator_t& dst_oloc, Context *oncommit) {
+    vector<OSDOp> ops;
+    int i = init_ops(ops, 1, NULL);
+    ops[i].op.op = CEPH_OSD_OP_COPY_FROM;
+    ops[i].op.copy_from.snapid = src_snapid;
+    ops[i].op.copy_from.src_version = 0;
+    ops[i].op.copy_from.flags = 0;
+    ::encode(src_oid, ops[i].indata);
+    ::encode(src_oloc, ops[i].indata);
+    Op *o = new Op(dst_oid, dst_oloc, ops, global_op_flags | CEPH_OSD_FLAG_WRITE, oncommit, NULL);    
+    ceph_tid_t tid;
+    op_submit(o, &tid);
+    return tid;
+  }
+  
   void list_nobjects(NListContext *p, Context *onfinish);
   uint32_t list_nobjects_seek(NListContext *p, uint32_t pos);
   uint32_t list_nobjects_seek(NListContext *list_context, const hobject_t& c);
@@ -3024,6 +3041,8 @@ public:
     sg_write_trunc(extents, snapc, bl, mtime, flags, 0, 0, oncommit,
 		   op_flags);
   }
+
+  void sg_copy(vector<ObjectExtent>& src_extents, snapid_t src_snapid, vector<ObjectExtent>& dst_extents, Context *oncommit);
 
   void ms_handle_connect(Connection *con) override;
   bool ms_handle_reset(Connection *con) override;

@@ -4368,6 +4368,16 @@ void Objecter::_sg_read_finish(vector<ObjectExtent>& extents,
   }
 }
 
+void Objecter::sg_copy(vector<ObjectExtent>& src_extents, snapid_t src_snapid,
+                               vector<ObjectExtent>& dst_extents, Context *oncommit)
+{
+  vector<ObjectExtent>::iterator p = src_extents.begin();
+  vector<ObjectExtent>::iterator q = dst_extents.begin();
+  for ( ; p != src_extents.end() && q != dst_extents.end();
+        ++p, ++q) {        
+    copy(p->oid, p->oloc, src_snapid, q->oid, q->oloc, oncommit);
+  }
+}
 
 void Objecter::ms_handle_connect(Connection *con)
 {

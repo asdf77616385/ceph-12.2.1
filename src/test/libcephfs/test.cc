@@ -1858,3 +1858,28 @@ TEST(LibCephFS, OperationsOnRoot)
 
   ceph_shutdown(cmount);
 }
+
+TEST(LibCephFS, XCopy) {
+  struct ceph_mount_info *cmount;
+  ASSERT_EQ(ceph_create(&cmount, NULL), 0);
+  ASSERT_EQ(0, ceph_conf_parse_env(cmount, NULL));
+  ASSERT_EQ(ceph_conf_read_file(cmount, NULL), 0);
+  ASSERT_EQ(ceph_mount(cmount, NULL), 0);
+
+  std::string src_fn("srcfile");
+  int fd = ceph_open(cmount, src_fn.c_str(), O_RDWR|O_CREAT, 0644);
+  ASSERT_LT(0, fd);
+
+  /* write data */
+  uint64_t size = 4194304;
+  char *write_buf = new char[size];
+  ASSERT_EQ(ceph_write(cmount, fd, write_buf, size, 0), size);
+  delete[] write_buf;
+  std::string dst_fn("dstfile");
+  ASSERT_EQ(ceph_copy(cmount, src_fn.c_str(), dst_fn.c_str()), 0);
+  struct ceph_statx st;
+  ceph_statx(cmount, dst_fn.c_str(), &st, CEPH_STATX_SIZE, 0);
+  std::cout << "File " << dst_fn << " size " << st.stx_size << std::endl;
+  ceph_shutdown(cmount);
+}
+
