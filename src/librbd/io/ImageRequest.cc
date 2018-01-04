@@ -394,6 +394,56 @@ void ImageReadRequest<I>::send_image_cache_request() {
 }
 
 template <typename I>
+ImageCopyRequest<I>::ImageCopyRequest(I &image_ctx, AioCompletion *aio_comp,
+        Extents &&image_extents, vector<ObjectExtent>::iterator src,
+		vector<ObjectExtent>::iterator dest, const ZTracer::Trace &parent_trace)
+  : ImageRequest<I>(image_ctx, aio_comp, std::move(image_extents), "xcopy",
+		    parent_trace), m_src(src), m_dest(dest){
+  //aio_comp->read_result = std::move(read_result);
+  this->set_bypass_image_cache();
+}
+
+template <typename I>
+int ImageCopyRequest<I>::clip_request() {
+  return 0;
+}
+
+template <typename I>
+void ImageCopyRequest<I>::send_image_cache_request() {
+  return ;
+}
+
+template <typename I>
+void ImageCopyRequest<I>::send_request() {
+  I &image_ctx = this->m_image_ctx;
+  CephContext *cct = image_ctx.cct;
+
+  AioCompletion *aio_comp = this->m_aio_comp;
+  librados::snap_t snap_id;
+  {
+  	RWLock::RLocker snap_locker(image_ctx.snap_lock);
+  	snap_id = image_ctx.snap_id;
+  }
+  aio_comp->set_request_count(1);
+  ldout(cct, 20) << "oid " << dendl;
+
+  auto req_comp = new io::ReadResult::C_CopyRequest(
+    aio_comp);
+  //ObjectReadRequest<I> *req = ObjectReadRequest<I>::create(
+  //  &image_ctx, extent.oid.name, extent.objectno, extent.offset,
+  //  extent.length, extent.buffer_extents, snap_id, true, m_op_flags,
+//this->m_trace, req_comp);
+  ObjectCopyRequest<I> *req = ObjectCopyRequest<I>::create(&image_ctx, m_src->oid.name, 
+			   m_src->objectno, m_src->offset, m_src->length,
+			   snap_id, false, this->m_trace, req_comp,m_src,m_dest);
+  
+  //req_comp->request = req;
+  req->send();
+
+  aio_comp->put();
+}
+
+template <typename I>
 void AbstractImageWriteRequest<I>::send_request() {
   I &image_ctx = this->m_image_ctx;
   CephContext *cct = image_ctx.cct;
@@ -1012,6 +1062,7 @@ int ImageCompareAndWriteRequest<I>::prune_object_extents(ObjectExtents &object_e
 
 template class librbd::io::ImageRequest<librbd::ImageCtx>;
 template class librbd::io::ImageReadRequest<librbd::ImageCtx>;
+template class librbd::io::ImageCopyRequest<librbd::ImageCtx>;
 template class librbd::io::AbstractImageWriteRequest<librbd::ImageCtx>;
 template class librbd::io::ImageWriteRequest<librbd::ImageCtx>;
 template class librbd::io::ImageDiscardRequest<librbd::ImageCtx>;

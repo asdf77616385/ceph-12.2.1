@@ -2401,6 +2401,31 @@ extern "C" int rbd_copy4(rbd_image_t image, rados_ioctx_t dest_p,
   return r;
 }
 
+extern "C" int rbd_xcopy(rbd_image_t image, rados_ioctx_t dest_p,
+			const char *destname)
+{
+  librbd::ImageCtx *ictx = (librbd::ImageCtx *)image;
+  librados::IoCtx dest_io_ctx;
+  librados::IoCtx::from_rados_ioctx_t(dest_p, dest_io_ctx);
+  tracepoint(librbd, copy_enter, ictx, ictx->name.c_str(), ictx->snap_name.c_str(), ictx->read_only, dest_io_ctx.get_pool_name().c_str(), dest_io_ctx.get_id(), destname);
+  librbd::ImageOptions opts;
+  librbd::NoOpProgressContext prog_ctx;
+  int r = librbd::copy(ictx, dest_io_ctx, destname, opts, prog_ctx,0,true);
+  tracepoint(librbd, copy_exit, r);
+  return r;
+}
+
+extern "C" int rbd_xcopy2(rbd_image_t srcp, rbd_image_t destp)
+{
+  librbd::ImageCtx *src = (librbd::ImageCtx *)srcp;
+  librbd::ImageCtx *dest = (librbd::ImageCtx *)destp;
+  tracepoint(librbd, copy2_enter, src, src->name.c_str(), src->snap_name.c_str(), src->read_only, dest, dest->name.c_str(), dest->snap_name.c_str(), dest->read_only);
+  librbd::NoOpProgressContext prog_ctx;
+  int r = librbd::xcopy(src, dest, prog_ctx, 0);
+  tracepoint(librbd, copy2_exit, r);
+  return r;
+}
+
 extern "C" int rbd_copy_with_progress(rbd_image_t image, rados_ioctx_t dest_p,
 				      const char *destname,
 				      librbd_progress_fn_t fn, void *data)

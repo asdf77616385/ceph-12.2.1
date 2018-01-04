@@ -797,6 +797,18 @@ int librados::IoCtxImpl::aio_operate_read(const object_t &oid,
   return 0;
 }
 
+int librados::IoCtxImpl::aio_operate_xcopy(const object_t& src_oid, const object_locator_t& src_oloc,
+  	      snapid_t src_snapid,const object_t& dst_oid, const object_locator_t& dst_oloc,
+  	      AioCompletionImpl *c)
+{
+  //Context *onack = NULL;//new C_aio_Ack(c);
+  Context *oncommit = NULL;// new C_aio_Safe(c);
+  //c->is_read = true;
+  //c->io = this;
+  c->tid = objecter->copy(src_oid, src_oloc, src_snapid,dst_oid,dst_oloc, oncommit);
+  return 0;
+}
+
 int librados::IoCtxImpl::aio_operate(const object_t& oid,
 				     ::ObjectOperation *o, AioCompletionImpl *c,
 				     const SnapContext& snap_context, int flags,

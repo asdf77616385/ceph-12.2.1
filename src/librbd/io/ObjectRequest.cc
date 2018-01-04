@@ -184,6 +184,44 @@ static inline bool is_copy_on_read(ImageCtx *ictx, librados::snap_t snap_id) {
            ictx->exclusive_lock->is_lock_owner()));
 }
 
+template <typename I>
+ObjectCopyRequest<I>::ObjectCopyRequest(I *ictx, const std::string &oid,
+		  uint64_t objectno, uint64_t offset, uint64_t len,
+		  librados::snap_t snap_id, bool hide_enoent, 
+		  const ZTracer::Trace &parent_trace, Context *completion, 
+		  vector<ObjectExtent>::iterator src,vector<ObjectExtent>::iterator dest)
+  : ObjectRequest<I>(util::get_image_ctx(ictx), oid, objectno, offset, len,
+                     snap_id, hide_enoent, "xcopy", parent_trace, completion),
+	m_src(src),m_dest(dest) {
+}
+template <typename I>
+bool ObjectCopyRequest<I>::should_complete(int r)
+{
+	ImageCtx *image_ctx = this->m_ictx;
+	ldout(image_ctx->cct, 20) << "should_complete " << this
+							   << " r = " << r << dendl;
+	
+	bool finished = true;
+	return finished;
+}
+template <typename I>
+void ObjectCopyRequest<I>::send()
+{
+	ImageCtx *image_ctx = this->m_ictx;
+    ldout(image_ctx->cct, 20) << this->m_oid << " " << this->m_object_off
+                            << "~" << this->m_object_len
+                            << dendl;
+	RWLock::RLocker snap_locker(image_ctx->snap_lock);
+	librados::AioCompletion *rados_completion =
+	util::create_rados_callback(this);
+	int r;
+	r = image_ctx->data_ctx.aio_operate(m_src->oid.name, m_src->oloc.pool,m_src->oloc.nspace,m_src->oloc.key,m_src->oloc.hash, 
+		this->m_snap_id,m_dest->oid.name,m_dest->oloc.pool,m_dest->oloc.nspace,m_dest->oloc.key,m_dest->oloc.hash,rados_completion);
+	assert(r == 0);
+
+	rados_completion->release();
+}
+  
 /** read **/
 
 template <typename I>
@@ -781,3 +819,4 @@ void ObjectCompareAndWriteRequest::complete(int r)
 
 template class librbd::io::ObjectRequest<librbd::ImageCtx>;
 template class librbd::io::ObjectReadRequest<librbd::ImageCtx>;
+template class librbd::io::ObjectCopyRequest<librbd::ImageCtx>;

@@ -394,6 +394,9 @@ CEPH_RBD_API int rbd_copy3(rbd_image_t src, rados_ioctx_t dest_io_ctx,
 CEPH_RBD_API int rbd_copy4(rbd_image_t src, rados_ioctx_t dest_io_ctx,
 			   const char *destname, rbd_image_options_t dest_opts,
 			   size_t sparse_size);
+CEPH_RBD_API int rbd_xcopy(rbd_image_t image, rados_ioctx_t dest_io_ctx,
+                          const char *destname);
+CEPH_RBD_API int rbd_xcopy2(rbd_image_t src, rbd_image_t dest);
 CEPH_RBD_API int rbd_copy_with_progress(rbd_image_t image, rados_ioctx_t dest_p,
                                         const char *destname,
                                         librbd_progress_fn_t cb, void *cbdata);

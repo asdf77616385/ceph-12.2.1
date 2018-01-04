@@ -754,6 +754,18 @@ private:
     return -ENOENT;
   }
 
+  bool ImageCtx::aio_read_hit_cache(object_t o, uint64_t object_no,size_t len,uint64_t off) {
+	vector<ObjectExtent> extents;
+    ObjectExtent extent(o, object_no, off, len, 0);
+    extent.oloc.pool = data_ctx.get_id();
+    extent.buffer_extents.push_back(make_pair(0, len));
+    extents.push_back(extent);
+	cache_lock.Lock();
+    bool iret = object_cacher->is_cached(object_set, extents, snap_id);
+	cache_lock.Unlock();
+	return iret;
+  }
+  
   void ImageCtx::aio_read_from_cache(object_t o, uint64_t object_no,
 				     bufferlist *bl, size_t len,
 				     uint64_t off, Context *onfinish,

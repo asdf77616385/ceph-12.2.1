@@ -1553,6 +1553,26 @@ int librados::IoCtx::aio_operate(const std::string& oid, AioCompletion *c,
 				       0, pbl);
 }
 
+int librados::IoCtx::aio_operate(const std::string& sname, int64_t src_po, std::string src_ns, std::string src_s,int64_t src_ps,
+  	      uint64_t id,const std::string& dname, int64_t dst_po, std::string dst_ns, std::string dst_s,int64_t dst_ps,
+  	      AioCompletion *c)
+{
+  object_t src_oid(sname);
+  object_t dst_oid(dname);
+  snapid_t src_snapid(id);
+  object_locator_t src_oloc;
+  object_locator_t dst_oloc;
+  if(!src_s.empty())
+  	src_oloc = object_locator_t(src_po,src_ns,src_s);
+  else
+  	src_oloc = object_locator_t(src_po,src_ns,src_ps);
+  if(!dst_s.empty())
+  	dst_oloc = object_locator_t(dst_po,dst_ns,dst_s);
+  else
+  	dst_oloc = object_locator_t(dst_po,dst_ns,dst_ps);
+  return io_ctx_impl->aio_operate_xcopy(src_oid, src_oloc, src_snapid,dst_oid,dst_oloc,c->pc);
+}
+
 // deprecated
 int librados::IoCtx::aio_operate(const std::string& oid, AioCompletion *c,
 				 librados::ObjectReadOperation *o, 

@@ -953,6 +953,32 @@ TEST_F(TestLibRBD, TestCopy)
   rados_ioctx_destroy(ioctx);
 }
 
+TEST_F(TestLibRBD, TestXcopy)
+{
+  rados_ioctx_t ioctx;
+  rados_ioctx_create(_cluster, create_pool(true).c_str(), &ioctx);
+
+  rbd_image_t image;
+  int order = 0;
+  std::string name = get_temp_image_name();
+  std::string name2 = get_temp_image_name();
+  std::string name3 = get_temp_image_name();
+
+  uint64_t size = 2 << 25;
+
+  ASSERT_EQ(0, create_image(ioctx, name.c_str(), size, &order));
+  ASSERT_EQ(0, rbd_open(ioctx, name.c_str(), &image, NULL));
+  ASSERT_EQ(1, test_ls(ioctx, 1, name.c_str()));
+  ASSERT_EQ(0, rbd_xcopy(image, ioctx, name2.c_str()));
+  ASSERT_EQ(2, test_ls(ioctx, 2, name.c_str(), name2.c_str()));
+  //ASSERT_EQ(0, rbd_copy_with_progress(image, ioctx, name3.c_str(),
+  //				      print_progress_percent, NULL));
+  //ASSERT_EQ(3, test_ls(ioctx, 3, name.c_str(), name2.c_str(), name3.c_str()));
+
+  ASSERT_EQ(0, rbd_close(image));
+  rados_ioctx_destroy(ioctx);
+}
+
 class PrintProgress : public librbd::ProgressContext
 {
 public:

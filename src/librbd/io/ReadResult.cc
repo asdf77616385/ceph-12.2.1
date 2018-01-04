@@ -109,6 +109,10 @@ void ReadResult::C_ImageReadRequest::finish(int r) {
   C_ReadRequest::finish(r);
 }
 
+void ReadResult::C_CopyRequest::finish(int r) {
+  C_ReadRequest::finish(r);
+}
+
 void ReadResult::C_SparseReadRequestBase::finish(ExtentMap &extent_map,
                                                  const Extents &buffer_extents,
                                                  uint64_t offset, size_t length,

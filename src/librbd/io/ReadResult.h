@@ -32,7 +32,14 @@ private:
   };
 
 public:
+  struct C_CopyRequest : public C_ReadRequest{
 
+    C_CopyRequest(AioCompletion *aio_completion)
+      : C_ReadRequest(aio_completion) {
+    }
+    void finish(int r) override;
+  };
+  
   struct C_ImageReadRequest : public C_ReadRequest {
     Extents image_extents;
 

@@ -168,9 +168,10 @@ namespace librbd {
   int snap_is_protected(ImageCtx *ictx, const char *snap_name,
 			bool *is_protected);
   int copy(ImageCtx *ictx, IoCtx& dest_md_ctx, const char *destname,
-	   ImageOptions& opts, ProgressContext &prog_ctx, size_t sparse_size);
+	   ImageOptions& opts, ProgressContext &prog_ctx, size_t sparse_size, bool isxcopy = false);
   int copy(ImageCtx *src, ImageCtx *dest, ProgressContext &prog_ctx, size_t sparse_size);
-
+  int xcopy(ImageCtx *src, ImageCtx *dest, ProgressContext &prog_ctx, size_t sparse_size);
+  
   /* cooperative locking */
   int list_lockers(ImageCtx *ictx,
 		   std::list<locker_t> *locks,
@@ -204,7 +205,9 @@ namespace librbd {
 		       void *arg);
   void readahead(ImageCtx *ictx,
                  const vector<pair<uint64_t,uint64_t> >& image_extents);
-
+  //void aio_xcopy(ImageCtx *ictx,vector<ObjectExtent>::iterator src,
+  	      //vector<ObjectExtent>::iterator dest,Context *ctx);
+  	      
   int flush(ImageCtx *ictx);
   int invalidate_cache(ImageCtx *ictx);
   int poll_io_events(ImageCtx *ictx, io::AioCompletion **comps, int numcomp);

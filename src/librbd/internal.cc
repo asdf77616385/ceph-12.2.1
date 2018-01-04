@@ -1723,7 +1723,8 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
   };
 
   int copy(ImageCtx *src, IoCtx& dest_md_ctx, const char *destname,
-	   ImageOptions& opts, ProgressContext &prog_ctx, size_t sparse_size)
+	   ImageOptions& opts, ProgressContext &prog_ctx, 
+	   size_t sparse_size, bool isxcopy)
   {
     CephContext *cct = (CephContext *)dest_md_ctx.cct();
     ldout(cct, 20) << "copy " << src->name
@@ -1773,8 +1774,11 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
       return r;
     }
 
-    r = copy(src, dest, prog_ctx, sparse_size);
-
+    //r = copy(src, dest, prog_ctx, sparse_size);
+	if(isxcopy)
+		r = xcopy(src, dest, prog_ctx, sparse_size);
+	else
+    	r = copy(src, dest, prog_ctx, sparse_size);
     int close_r = dest->state->close();
     if (r == 0 && close_r < 0) {
       r = close_r;
@@ -1790,6 +1794,8 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
       delete m_bl;
       m_ctx->complete(r);
     }
+	ZTracer::Trace read_trace;
+	
   private:
     bufferlist *m_bl;
     Context *m_ctx;
@@ -1940,6 +1946,85 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
     return r;
   }
 
+   int xcopy(ImageCtx *src, ImageCtx *dest, ProgressContext &prog_ctx, size_t sparse_size)
+  {
+    CephContext *cct = src->cct;
+    ldout(cct, 20) << "xcopy " << " src:"<< src << " dest:"<<dest <<  dendl;
+    src->snap_lock.get_read();
+    uint64_t src_size = src->get_image_size(src->snap_id);
+    src->snap_lock.put_read();
+
+    dest->snap_lock.get_read();
+    uint64_t dest_size = dest->get_image_size(dest->snap_id);
+    dest->snap_lock.put_read();
+
+    
+    if (dest_size < src_size) {
+      lderr(cct) << " src size " << src_size << " >= dest size "
+		 << dest_size << dendl;
+      return -EINVAL;
+    }
+	ZTracer::Trace trace;
+    if (src->blkin_trace_all) {
+      trace.init("xcopy", &src->trace_endpoint);
+    }
+    int r=0;
+	RWLock::RLocker owner_lock(src->owner_lock);
+    SimpleThrottle throttle(src->concurrent_management_ops, false);
+	vector<ObjectExtent> src_extents;
+	vector<ObjectExtent> dest_extents;
+	Striper::file_to_extents(src->cct, src->format_string, &src->layout,
+			         	0, src_size, 0, src_extents);
+    Striper::file_to_extents(dest->cct, dest->format_string, &dest->layout, 
+						0, dest_size, 0, dest_extents);    
+    vector<ObjectExtent>::iterator p = src_extents.begin();
+  	vector<ObjectExtent>::iterator q = dest_extents.begin();
+    unsigned fadvise_flags = LIBRADOS_OP_FLAG_FADVISE_SEQUENTIAL |
+			     LIBRADOS_OP_FLAG_FADVISE_NOCACHE;
+  	for ( ; p != src_extents.end() && q != dest_extents.end();
+        ++p, ++q) {
+		if (throttle.pending_error()) {
+        	return throttle.wait_for_ret();
+      	}
+		bool bCache = false;
+		if(src->object_cacher) {
+  			bCache = src->aio_read_hit_cache(q->oid, q->objectno,q->length, q->offset);
+		}
+		bufferlist *bl = new bufferlist();
+		if(bCache){
+			ldout(cct, 20) << "xcopy hit cache,read from cache"<<  dendl;
+	        auto ctx = new C_CopyRead(&throttle, dest, p->offset, bl, sparse_size);
+	        auto comp = io::AioCompletion::create_and_start<Context>(
+				ctx, src, io::AIO_TYPE_READ);
+
+	        io::ImageReadRequest<> req(*src, comp, {{p->offset, p->length}},
+					 io::ReadResult{bl}, fadvise_flags,
+					 std::move(trace));
+	        ctx->read_trace = req.get_trace();
+
+	        req.send();
+		}else{
+			ldout(cct, 20) << "copy operation src to dest"<<  dendl;
+      		auto *end_op_ctx = new FunctionContext([&throttle](int r) {
+				throttle.end_op(r);
+      		});
+      		auto gather_ctx = new C_Gather(dest->cct, end_op_ctx);
+			auto ctx = new C_CopyWrite(bl, gather_ctx->new_sub());
+			auto comp = io::AioCompletion::create_and_start<Context>(
+				ctx, src, io::AIO_TYPE_READ);
+	        io::ImageCopyRequest<> req(*src, comp, {{p->offset, p->length}}, p, q, std::move(trace));
+	        ctx->read_trace = req.get_trace();
+
+	        req.send();
+		}
+		prog_ctx.update_progress(p->offset, p->length);
+	}
+	r = throttle.wait_for_ret();
+    if (r >= 0)
+      prog_ctx.update_progress(src_size, src_size);
+    return r;
+  }
+   
   int snap_set(ImageCtx *ictx, const cls::rbd::SnapshotNamespace &snap_namespace,
 	       const char *snap_name)
   {
@@ -2299,7 +2384,7 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
 
     return cls_client::metadata_list(&ictx->md_ctx, ictx->header_oid, start, max, pairs);
   }
-
+  
   struct C_RBD_Readahead : public Context {
     ImageCtx *ictx;
     object_t oid;

@@ -9,6 +9,7 @@
 #include "include/rados/librados.hpp"
 #include "common/snap_types.h"
 #include "common/zipkin_trace.h"
+#include "osd/osd_types.h"
 #include "librbd/ObjectMap.h"
 #include <map>
 
@@ -135,6 +136,38 @@ protected:
 
 private:
   bool m_has_parent = false;
+};
+
+template <typename ImageCtxT = ImageCtx>
+class ObjectCopyRequest : public ObjectRequest<ImageCtxT> {
+public:
+  typedef std::vector<std::pair<uint64_t, uint64_t> > Extents;
+
+  static ObjectCopyRequest* create(ImageCtxT *ictx, const std::string &oid,
+	  uint64_t objectno, uint64_t offset, uint64_t len,
+	  librados::snap_t snap_id, bool hide_enoent,
+	  const ZTracer::Trace &parent_trace, Context *completion, 
+	  vector<ObjectExtent>::iterator src,vector<ObjectExtent>::iterator dest) {
+    return new ObjectCopyRequest(ictx, oid, objectno, offset, len,
+            snap_id, hide_enoent, parent_trace, completion, src, dest);
+  }
+
+  ObjectCopyRequest(ImageCtxT *ictx, const std::string &oid,
+	  uint64_t objectno, uint64_t offset, uint64_t len,
+	  librados::snap_t snap_id, bool hide_enoent,
+	  const ZTracer::Trace &parent_trace, Context *completion, 
+	  vector<ObjectExtent>::iterator src,vector<ObjectExtent>::iterator dest);
+  bool should_complete(int r) override;
+  void send() override;
+  const char *get_op_type() const override {
+    return "read";
+  }
+  bool pre_object_map_update(uint8_t *new_state) override {
+    return false;
+  }
+private:
+  vector<ObjectExtent>::iterator m_src;
+  vector<ObjectExtent>::iterator m_dest;
 };
 
 template <typename ImageCtxT = ImageCtx>
@@ -578,5 +611,5 @@ private:
 
 extern template class librbd::io::ObjectRequest<librbd::ImageCtx>;
 extern template class librbd::io::ObjectReadRequest<librbd::ImageCtx>;
-
+extern template class librbd::io::ObjectCopyRequest<librbd::ImageCtx>;
 #endif // CEPH_LIBRBD_IO_OBJECT_REQUEST_H

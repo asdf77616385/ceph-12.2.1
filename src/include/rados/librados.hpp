@@ -1120,7 +1120,10 @@ namespace librados
     int aio_operate(const std::string& oid, AioCompletion *c,
         ObjectReadOperation *op, int flags,
         bufferlist *pbl, const blkin_trace_info *trace_info);
-
+	int aio_operate(const std::string& sname, int64_t src_po, std::string src_ns, std::string src_s,int64_t src_ps,
+  	      uint64_t id,const std::string& dname, int64_t dst_po, std::string dst_ns, std::string dst_s,int64_t dst_ps,
+  	      AioCompletion *c);
+	
     // watch/notify
     int watch2(const std::string& o, uint64_t *handle,
 	       librados::WatchCtx2 *ctx);
