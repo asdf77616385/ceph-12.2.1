@@ -801,10 +801,12 @@ int librados::IoCtxImpl::aio_operate_xcopy(const object_t& src_oid, const object
   	      snapid_t src_snapid,const object_t& dst_oid, const object_locator_t& dst_oloc,
   	      AioCompletionImpl *c)
 {
-  //Context *onack = NULL;//new C_aio_Ack(c);
-  Context *oncommit = NULL;// new C_aio_Safe(c);
+  Context *oncommit = new C_aio_Complete(c);
+#if defined(WITH_LTTNG) && defined(WITH_EVENTTRACE)
+  ((C_aio_Complete *) oncommit)->oid = src_oid;
+#endif
   //c->is_read = true;
-  //c->io = this;
+  c->io = this;
   c->tid = objecter->copy(src_oid, src_oloc, src_snapid,dst_oid,dst_oloc, oncommit);
   return 0;
 }

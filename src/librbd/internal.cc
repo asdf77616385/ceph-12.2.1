@@ -1981,6 +1981,10 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
   	vector<ObjectExtent>::iterator q = dest_extents.begin();
     unsigned fadvise_flags = LIBRADOS_OP_FLAG_FADVISE_SEQUENTIAL |
 			     LIBRADOS_OP_FLAG_FADVISE_NOCACHE;
+    auto *end_op_ctx = new FunctionContext([&throttle](int r) {
+				throttle.end_op(r);
+      		});
+    auto gather_ctx = new C_Gather(dest->cct, end_op_ctx);
   	for ( ; p != src_extents.end() && q != dest_extents.end();
         ++p, ++q) {
 		if (throttle.pending_error()) {
@@ -1994,21 +1998,17 @@ int validate_pool(IoCtx &io_ctx, CephContext *cct) {
 		if(bCache){
 			ldout(cct, 20) << "xcopy hit cache,read from cache"<<  dendl;
 	        auto ctx = new C_CopyRead(&throttle, dest, p->offset, bl, sparse_size);
-	        auto comp = io::AioCompletion::create_and_start<Context>(
-				ctx, src, io::AIO_TYPE_READ);
+	        auto comp = io::AioCompletion::create<Context>(ctx);
+  			src->io_work_queue->aio_read(comp, p->offset, p->length,
+                                io::ReadResult{bl}, 0);
+//	        io::ImageReadRequest<> req(*src, comp, {{p->offset, p->length}},
+//					 io::ReadResult{bl}, fadvise_flags,
+//					 std::move(trace));
+//	        ctx->read_trace = req.get_trace();
 
-	        io::ImageReadRequest<> req(*src, comp, {{p->offset, p->length}},
-					 io::ReadResult{bl}, fadvise_flags,
-					 std::move(trace));
-	        ctx->read_trace = req.get_trace();
-
-	        req.send();
+//	        req.send();
 		}else{
 			ldout(cct, 20) << "copy operation src to dest"<<  dendl;
-      		auto *end_op_ctx = new FunctionContext([&throttle](int r) {
-				throttle.end_op(r);
-      		});
-      		auto gather_ctx = new C_Gather(dest->cct, end_op_ctx);
 			auto ctx = new C_CopyWrite(bl, gather_ctx->new_sub());
 			auto comp = io::AioCompletion::create_and_start<Context>(
 				ctx, src, io::AIO_TYPE_READ);

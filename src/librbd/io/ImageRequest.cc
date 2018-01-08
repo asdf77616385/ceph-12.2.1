@@ -425,7 +425,8 @@ void ImageCopyRequest<I>::send_request() {
   	snap_id = image_ctx.snap_id;
   }
   aio_comp->set_request_count(1);
-  ldout(cct, 20) << "oid " << dendl;
+  ldout(cct, 20) << "ImageCopyRequest::send_request" << " oid " 
+  	<< m_src->oid.name<< dendl;
 
   auto req_comp = new io::ReadResult::C_CopyRequest(
     aio_comp);
@@ -439,7 +440,7 @@ void ImageCopyRequest<I>::send_request() {
   
   //req_comp->request = req;
   req->send();
-
+  //aio_comp->start_op(true);
   aio_comp->put();
 }
 

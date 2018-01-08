@@ -55,7 +55,6 @@ void AioCompletion::complete() {
   assert(lock.is_locked());
   assert(ictx != nullptr);
   CephContext *cct = ictx->cct;
-
   tracepoint(librbd, aio_complete_enter, this, rval);
   utime_t elapsed;
   elapsed = ceph_clock_now() - start_time;

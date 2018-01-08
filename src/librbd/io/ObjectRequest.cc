@@ -198,7 +198,7 @@ template <typename I>
 bool ObjectCopyRequest<I>::should_complete(int r)
 {
 	ImageCtx *image_ctx = this->m_ictx;
-	ldout(image_ctx->cct, 20) << "should_complete " << this
+	ldout(image_ctx->cct, 20) << "ObjectCopyRequest::should_complete " << this
 							   << " r = " << r << dendl;
 	
 	bool finished = true;
@@ -208,10 +208,20 @@ template <typename I>
 void ObjectCopyRequest<I>::send()
 {
 	ImageCtx *image_ctx = this->m_ictx;
-    ldout(image_ctx->cct, 20) << this->m_oid << " " << this->m_object_off
+    ldout(image_ctx->cct, 20) << "ObjectCopyRequest::send "<<this->m_oid << " " << this->m_object_off
                             << "~" << this->m_object_len
                             << dendl;
-	RWLock::RLocker snap_locker(image_ctx->snap_lock);
+    {
+      RWLock::RLocker snap_locker(image_ctx->snap_lock);
+
+      // send read request to parent if the object doesn't exist locally
+      if (image_ctx->object_map != nullptr &&
+          !image_ctx->object_map->object_may_exist(this->m_object_no)) {
+        image_ctx->op_work_queue->queue(util::create_context_callback<
+          ObjectRequest<I> >(this), -ENOENT);
+        return;
+      }
+    }
 	librados::AioCompletion *rados_completion =
 	util::create_rados_callback(this);
 	int r;
