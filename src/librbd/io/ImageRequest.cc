@@ -430,10 +430,6 @@ void ImageCopyRequest<I>::send_request() {
 
   auto req_comp = new io::ReadResult::C_CopyRequest(
     aio_comp);
-  //ObjectReadRequest<I> *req = ObjectReadRequest<I>::create(
-  //  &image_ctx, extent.oid.name, extent.objectno, extent.offset,
-  //  extent.length, extent.buffer_extents, snap_id, true, m_op_flags,
-//this->m_trace, req_comp);
   ObjectCopyRequest<I> *req = ObjectCopyRequest<I>::create(&image_ctx, m_src->oid.name, 
 			   m_src->objectno, m_src->offset, m_src->length,
 			   snap_id, false, this->m_trace, req_comp,m_src,m_dest);

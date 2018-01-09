@@ -161,10 +161,6 @@ public:
   ImageCopyRequest(ImageCtxT &image_ctx,AioCompletion *aio_comp,
         Extents &&image_extents, vector<ObjectExtent>::iterator src,
 		vector<ObjectExtent>::iterator dest, const ZTracer::Trace &parent_trace);
-//  (ImageCtxT &image_ctx, AioCompletion *aio_comp,
-//                   Extents &&image_extents, ReadResult &&read_result,
-//                   int op_flags, const ZTracer::Trace &parent_trace,
-//                   ImageCtx *dest);
 
 protected:
   int clip_request() override;
